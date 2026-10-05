@@ -1,7 +1,7 @@
 module Main where
 
 import ComputerVisionFW
-import Data.Matrix (fromLists)
+import Data.Matrix (fromLists, toLists)
 import Test.HUnit
 
 tests :: Test
@@ -112,6 +112,19 @@ tests = TestList
           , [8,7,8,9,8]
           , [5,4,5,6,5]
           ]
+    , "one-pixel Gaussian filter is the identity" ~:
+        gaussianFilter 1 1.0 (fromLists [[1.0,2.0],[3.0,4.0]]) ~?=
+        fromLists [[1.0,2.0],[3.0,4.0]]
+    , TestLabel "Gaussian kernel is normalized" $
+        TestCase $
+          assertBool "kernel weights should sum to one"
+            (abs (sum (concat (toLists (gaussianKernel 3 1.0))) - 1.0) < 1.0e-12)
+    , TestLabel "Gaussian filter preserves constant intensity" $
+        TestCase $
+          assertBool "a normalized filter should not change a constant image"
+            ( all (\value -> abs (value - 50.0) < 1.0e-12)
+                (concat (toLists (gaussianFilter 3 1.0 (fromLists (replicate 4 (replicate 4 50.0))))))
+            )
     , TestLabel "white Gaussian noise with zero deviation shifts by its mean" $
         TestCase $ do
           noisy <- whiteGaussianNoise 2.5 0.0

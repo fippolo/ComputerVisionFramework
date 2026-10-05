@@ -136,6 +136,28 @@ mirrorIndex size index
             then position
             else period - position
 
+gaussianKernel :: Int -> Double -> Matrix Double
+gaussianKernel size sigma
+  | size <= 0 || even size || sigma <= 0 = fromLists []
+  | otherwise = fromLists normalizedWeights
+  where
+    radius = size `div` 2
+    weights =
+      [ [ exp (-(fromIntegral (x * x + y * y)) / (2 * sigma * sigma))
+        | x <- [-radius .. radius]
+        ]
+      | y <- [-radius .. radius]
+      ]
+    totalWeight = sum (concat weights)
+    normalizedWeights = map (map (/ totalWeight)) weights
+
+gaussianFilter :: Int -> Double -> Matrix Double -> Matrix Double
+gaussianFilter size sigma signal
+  | size <= 0 || even size || sigma <= 0 = fromLists []
+  | otherwise = convolve2d (mirrorPad (size `div` 2) signal) kernel
+  where
+    kernel = gaussianKernel size sigma
+
 whiteGaussianNoise :: Double -> Double -> Matrix Double -> IO (Matrix Double)
 whiteGaussianNoise mean stdDev signal
   | stdDev < 0 = error "whiteGaussianNoise: standard deviation must be non-negative"
