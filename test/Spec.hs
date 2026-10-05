@@ -138,6 +138,15 @@ tests = TestList
           noisy <- whiteGaussianNoise 2.5 0.0
             (fromLists [[1.0, 2.0], [3.0, 4.0]])
           noisy @?= fromLists [[3.5, 4.5], [5.5, 6.5]]
+    , TestLabel "median filter test" $
+        TestCase $ do
+          medianFilter 3
+            (fromLists
+              [ [10.0, 10.0, 10.0]
+              , [10.0, 255.0, 10.0]
+              , [10.0, 10.0, 10.0]
+              ])
+            @?= fromLists [[10.0]]
   ]
 
 main :: IO ()

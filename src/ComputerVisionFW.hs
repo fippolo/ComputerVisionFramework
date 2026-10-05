@@ -1,6 +1,6 @@
 module ComputerVisionFW where
 
-import Data.List()
+import Data.List(sort)
 import Data.Word (Word8)
 import Codec.Picture (PixelRGB8 (PixelRGB8), convertRGB8, generateImage, imageHeight, imageWidth, pixelAt, readImage, writeBitmap)
 import System.Random (randomRIO)
@@ -232,3 +232,23 @@ gaussianFilter size sigma signal
   | otherwise = convolve2d (mirrorPad (size `div` 2) signal) kernel
   where
     kernel = gaussianKernel size sigma
+
+medianFilter :: Int -> Matrix Double -> Matrix Double
+medianFilter k signal
+    | nrows signal < k || ncols signal < k = fromLists []
+    | k <= 0 = fromLists []
+    | otherwise = fromLists (rowsOf outputWidth medianValues)
+    where
+        signalWindows = windows2d 1 1 k k signal
+        medianValues = [ medianvlues window | window <- signalWindows ]
+        outputWidth = ncols signal - k + 1
+
+medianvlues :: Matrix Double -> Double
+medianvlues window =
+  let sortedValues = sort (concat (toLists window))
+      n = length sortedValues
+  in if odd n
+     then sortedValues !! (n `div` 2)
+     else let mid1 = sortedValues !! (n `div` 2 - 1)
+              mid2 = sortedValues !! (n `div` 2)
+          in (mid1 + mid2) / 2
