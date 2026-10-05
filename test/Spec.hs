@@ -103,6 +103,15 @@ tests = TestList
           , [7,7,8,9,9]
           , [7,7,8,9,9]
           ]
+    , "one-pixel mirror padding" ~:
+        mirrorPad 1 (fromLists [[1,2,3],[4,5,6],[7,8,9]]) ~?=
+        fromLists
+          [ [5,4,5,6,5]
+          , [2,1,2,3,2]
+          , [5,4,5,6,5]
+          , [8,7,8,9,8]
+          , [5,4,5,6,5]
+          ]
     , TestLabel "white Gaussian noise with zero deviation shifts by its mean" $
         TestCase $ do
           noisy <- whiteGaussianNoise 2.5 0.0

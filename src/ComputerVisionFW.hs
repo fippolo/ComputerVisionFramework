@@ -110,6 +110,32 @@ replicatePad padSize matrix
                ++ replicate padSize (padRow padSize bottomRow)
                 )
 
+mirrorPad :: Int -> Matrix a -> Matrix a
+mirrorPad padSize matrix
+  | padSize <= 0 || nrows matrix == 0 || ncols matrix == 0 = matrix
+  | otherwise =
+      fromLists
+        [ [ row !! mirrorIndex width x
+          | x <- [-padSize .. width + padSize - 1]
+          ]
+        | y <- [-padSize .. height + padSize - 1]
+        , let row = originalRows !! mirrorIndex height y
+        ]
+  where
+    originalRows = toLists matrix
+    height = nrows matrix
+    width = ncols matrix
+
+mirrorIndex :: Int -> Int -> Int
+mirrorIndex size index
+  | size == 1 = 0
+  | otherwise =
+      let period = 2 * size - 2
+          position = index `mod` period
+       in if position < size
+            then position
+            else period - position
+
 whiteGaussianNoise :: Double -> Double -> Matrix Double -> IO (Matrix Double)
 whiteGaussianNoise mean stdDev signal
   | stdDev < 0 = error "whiteGaussianNoise: standard deviation must be non-negative"
