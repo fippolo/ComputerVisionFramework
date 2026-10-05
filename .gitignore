@@ -1,0 +1,25 @@
+# Cabal and Stack build artifacts
+dist/
+dist-*/
+dist-newstyle/
+.stack-work/
+
+# GHC compilation artifacts
+*.hi
+*.o
+*.dyn_hi
+*.dyn_o
+*.prof
+*.aux
+*.hpc
+
+# Editor settings and temporary files
+.vscode/
+.idea/
+*~
+*.swp
+*.swo
+
+# Windows metadata
+Thumbs.db
+Desktop.ini
