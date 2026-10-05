@@ -1,10 +1,11 @@
 module ComputerVisionFW where
 
 import Data.List(sort)
+import Data.Array (Array, (!), array)
 import Data.Word (Word8)
 import Codec.Picture (PixelRGB8 (PixelRGB8), convertRGB8, generateImage, imageHeight, imageWidth, pixelAt, readImage, writeBitmap)
 import System.Random (randomRIO)
-import Data.Matrix (Matrix, submatrix,fromLists,toLists,nrows, ncols, zero, (<|>), (<->))
+import Data.Matrix (Matrix, submatrix, fromLists, toLists, nrows, ncols, getElem, zero, (<|>), (<->))
 
 
 
@@ -281,3 +282,73 @@ bilateralValue spatialSigma rangeSigma window =
       ]
     weightedSum = sum [pixel * weight | (pixel, weight) <- weightedPixels]
     totalWeight = sum [weight | (_, weight) <- weightedPixels]
+
+nonLocalMeansFilter :: Int -> Int -> Double -> Matrix Double -> Matrix Double
+nonLocalMeansFilter patchSize searchSize filteringStrength signal
+  | patchSize <= 0 || even patchSize || searchSize <= 0 || even searchSize
+      || filteringStrength <= 0 || nrows signal == 0 || ncols signal == 0 =
+      fromLists []
+  | otherwise =
+      fromLists
+        [ [ filteredValue (x + paddingRadius) (y + paddingRadius)
+          | x <- [0 .. ncols signal - 1]
+          ]
+        | y <- [0 .. nrows signal - 1]
+        ]
+  where
+    patchRadius = patchSize `div` 2
+    searchRadius = searchSize `div` 2
+    paddingRadius = patchRadius + searchRadius
+    paddedSignal = mirrorPad paddingRadius signal
+    paddedHeight = nrows paddedSignal
+    paddedWidth = ncols paddedSignal
+    offsetIntegrals =
+      [ (offsetX, offsetY, squaredDifferenceIntegral offsetX offsetY)
+      | offsetY <- [-searchRadius .. searchRadius]
+      , offsetX <- [-searchRadius .. searchRadius]
+      ]
+    filteredValue centerX centerY =
+      weightedSum / totalWeight
+      where
+        weightedPixels =
+          [ (matrixPixelAt (centerX + offsetX) (centerY + offsetY), weight)
+          | (offsetX, offsetY, integral) <- offsetIntegrals
+          , let distance = patchDistance integral centerX centerY
+          , let weight = exp (-distance / (filteringStrength * filteringStrength))
+          ]
+        weightedSum = sum [pixel * weight | (pixel, weight) <- weightedPixels]
+        totalWeight = sum [weight | (_, weight) <- weightedPixels]
+    squaredDifferenceIntegral offsetX offsetY =
+      integralImage paddedHeight paddedWidth $ \x y ->
+        let difference = matrixPixelAt x y - matrixPixelAt (x + offsetX) (y + offsetY)
+         in difference * difference
+    patchDistance integral centerX centerY =
+      rectangleSum integral
+        (centerX - patchRadius) (centerY - patchRadius)
+        (centerX + patchRadius) (centerY + patchRadius)
+    matrixPixelAt x y =
+      getElem (mirrorIndex paddedHeight y + 1) (mirrorIndex paddedWidth x + 1) paddedSignal
+
+integralImage :: Int -> Int -> (Int -> Int -> Double) -> Array (Int, Int) Double
+integralImage height width valueAt = integral
+  where
+    integral = array ((0, 0), (height, width)) entries
+    entries =
+      [ ((0, column), 0.0) | column <- [0 .. width] ]
+        ++ [ ((row, 0), 0.0) | row <- [1 .. height] ]
+        ++ [ ((row, column)
+             , valueAt (column - 1) (row - 1)
+                 + integral ! (row - 1, column)
+                 + integral ! (row, column - 1)
+                 - integral ! (row - 1, column - 1)
+             )
+           | row <- [1 .. height]
+           , column <- [1 .. width]
+           ]
+
+rectangleSum :: Array (Int, Int) Double -> Int -> Int -> Int -> Int -> Double
+rectangleSum integral left top right bottom =
+  integral ! (bottom + 1, right + 1)
+    - integral ! (top, right + 1)
+    - integral ! (bottom + 1, left)
+    + integral ! (top, left)

@@ -23,6 +23,7 @@ library
     -- other-extensions:
     build-depends:
         base ^>=4.20.2.0,
+        array ^>=0.5.8.0,
         matrix >=0.3.4.4 && <0.4,
         random >=1.2 && <1.4,
         JuicyPixels >=3.3 && <3.4

@@ -163,6 +163,16 @@ tests = TestList
               gaussianEdgeValue = toLists (gaussianFilter 3 1.0 edge) !! 2 !! 2
            in assertBool "the bilateral result should stay closer to the zero-valued side of the edge"
                 (bilateralEdgeValue < 1.0 && bilateralEdgeValue < gaussianEdgeValue)
+    , "one-pixel non-local means filter is the identity" ~:
+        nonLocalMeansFilter 1 1 10.0 (fromLists [[1.0,2.0],[3.0,4.0]]) ~?=
+        fromLists [[1.0,2.0],[3.0,4.0]]
+    , TestLabel "non-local means preserves constant intensity" $
+        TestCase $
+          assertBool "matching patches in a constant image should preserve its intensity"
+            ( all (\value -> abs (value - 50.0) < 1.0e-12)
+                (concat (toLists (nonLocalMeansFilter 3 3 10.0
+                  (fromLists (replicate 4 (replicate 4 50.0))))))
+            )
   ]
 
 main :: IO ()
