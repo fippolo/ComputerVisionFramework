@@ -1,6 +1,9 @@
 module ComputerVisionFW where
 
 import Data.List()
+import Data.Word (Word8)
+import Codec.Picture (PixelRGB8 (PixelRGB8), convertRGB8, generateImage, imageHeight, imageWidth, pixelAt, readImage, writeBitmap)
+import System.Random (randomRIO)
 import Data.Matrix (Matrix, submatrix,fromLists,toLists,nrows, ncols, zero, (<|>), (<->))
 
 
@@ -106,3 +109,61 @@ replicatePad padSize matrix
                ++ map (padRow padSize) rows
                ++ replicate padSize (padRow padSize bottomRow)
                 )
+
+whiteGaussianNoise :: Double -> Double -> Matrix Double -> IO (Matrix Double)
+whiteGaussianNoise mean stdDev signal
+  | stdDev < 0 = error "whiteGaussianNoise: standard deviation must be non-negative"
+  | otherwise =
+      fromLists <$> traverse (traverse addNoise) (toLists signal)
+  where
+    addNoise x = do
+      z <- standardNormal
+      pure (x + mean + stdDev * z)
+
+standardNormal :: IO Double
+standardNormal = do
+  u1 <- randomRIO (1.0e-12, 1.0)
+  u2 <- randomRIO (0.0, 1.0)
+  pure (sqrt (-2 * log u1) * cos (2 * pi * u2))
+
+-- | Load a bitmap and convert its pixels to grayscale intensities in [0, 255].
+-- The resulting matrix has one row per image row and one column per image column.
+bitmapToGrayscaleMatrix :: FilePath -> IO (Either String (Matrix Double))
+bitmapToGrayscaleMatrix path = do
+  decoded <- readImage path
+  pure $ do
+    image <- decoded
+    let rgbImage = convertRGB8 image
+    pure . fromLists $
+      [ [ pixelLuminance (pixelAt rgbImage x y)
+        | x <- [0 .. imageWidth rgbImage - 1]
+        ]
+      | y <- [0 .. imageHeight rgbImage - 1]
+      ]
+
+pixelLuminance :: PixelRGB8 -> Double
+pixelLuminance (PixelRGB8 red green blue) =
+  0.2126 * fromIntegral red
+    + 0.7152 * fromIntegral green
+    + 0.0722 * fromIntegral blue
+
+-- | Save a matrix of grayscale intensities as an 8-bit bitmap.
+-- Values outside [0, 255] are clamped before writing.
+grayscaleMatrixToBitmap :: FilePath -> Matrix Double -> IO ()
+grayscaleMatrixToBitmap path matrix
+  | nrows matrix == 0 || ncols matrix == 0 =
+      ioError (userError "grayscaleMatrixToBitmap: matrix must not be empty")
+  | otherwise =
+      writeBitmap path image
+  where
+    image = generateImage pixel (ncols matrix) (nrows matrix)
+    rows = toLists matrix
+    pixel x y =
+      let intensity = rows !! y !! x
+          value = intensityToWord8 intensity
+       in PixelRGB8 value value value
+
+intensityToWord8 :: Double -> Word8
+intensityToWord8 intensity
+  | isNaN intensity || isInfinite intensity = 0
+  | otherwise = fromIntegral (round (max 0 (min 255 intensity)) :: Integer)

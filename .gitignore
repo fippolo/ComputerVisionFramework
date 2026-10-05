@@ -23,3 +23,7 @@ dist-newstyle/
 # Windows metadata
 Thumbs.db
 Desktop.ini
+
+# Local sample images
+example-images/
+example images/

@@ -103,6 +103,11 @@ tests = TestList
           , [7,7,8,9,9]
           , [7,7,8,9,9]
           ]
+    , TestLabel "white Gaussian noise with zero deviation shifts by its mean" $
+        TestCase $ do
+          noisy <- whiteGaussianNoise 2.5 0.0
+            (fromLists [[1.0, 2.0], [3.0, 4.0]])
+          noisy @?= fromLists [[3.5, 4.5], [5.5, 6.5]]
   ]
 
 main :: IO ()
