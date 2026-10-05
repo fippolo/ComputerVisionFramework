@@ -147,6 +147,22 @@ tests = TestList
               , [10.0, 10.0, 10.0]
               ])
             @?= fromLists [[10.0]]
+    , "one-pixel bilateral filter is the identity" ~:
+        bilateralFilter 1 1.0 10.0 (fromLists [[1.0,2.0],[3.0,4.0]]) ~?=
+        fromLists [[1.0,2.0],[3.0,4.0]]
+    , TestLabel "bilateral filter preserves a sharp edge better than Gaussian filtering" $
+        TestCase $
+          let edge = fromLists
+                [ [0.0, 0.0, 0.0, 100.0, 100.0]
+                , [0.0, 0.0, 0.0, 100.0, 100.0]
+                , [0.0, 0.0, 0.0, 100.0, 100.0]
+                , [0.0, 0.0, 0.0, 100.0, 100.0]
+                , [0.0, 0.0, 0.0, 100.0, 100.0]
+                ]
+              bilateralEdgeValue = toLists (bilateralFilter 3 1.0 5.0 edge) !! 2 !! 2
+              gaussianEdgeValue = toLists (gaussianFilter 3 1.0 edge) !! 2 !! 2
+           in assertBool "the bilateral result should stay closer to the zero-valued side of the edge"
+                (bilateralEdgeValue < 1.0 && bilateralEdgeValue < gaussianEdgeValue)
   ]
 
 main :: IO ()

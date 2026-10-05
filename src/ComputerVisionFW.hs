@@ -252,3 +252,32 @@ medianvlues window =
      else let mid1 = sortedValues !! (n `div` 2 - 1)
               mid2 = sortedValues !! (n `div` 2)
           in (mid1 + mid2) / 2
+
+bilateralFilter :: Int -> Double -> Double -> Matrix Double -> Matrix Double
+bilateralFilter size spatialSigma rangeSigma signal
+  | size <= 0 || even size || spatialSigma <= 0 || rangeSigma <= 0 = fromLists []
+  | otherwise = fromLists (rowsOf outputWidth filteredValues)
+  where
+    radius = size `div` 2
+    paddedSignal = mirrorPad radius signal
+    signalWindows = windows2d 1 1 size size paddedSignal
+    filteredValues = map (bilateralValue spatialSigma rangeSigma) signalWindows
+    outputWidth = ncols signal
+
+bilateralValue :: Double -> Double -> Matrix Double -> Double
+bilateralValue spatialSigma rangeSigma window =
+  weightedSum / totalWeight
+  where
+    rows = toLists window
+    radius = nrows window `div` 2
+    centerValue = rows !! radius !! radius
+    weightedPixels =
+      [ (pixel, spatialWeight * rangeWeight)
+      | (y, row) <- zip [-radius .. radius] rows
+      , (x, pixel) <- zip [-radius .. radius] row
+      , let spatialWeight = exp (-(fromIntegral (x * x + y * y)) / (2 * spatialSigma * spatialSigma))
+      , let difference = pixel - centerValue
+      , let rangeWeight = exp (-(difference * difference) / (2 * rangeSigma * rangeSigma))
+      ]
+    weightedSum = sum [pixel * weight | (pixel, weight) <- weightedPixels]
+    totalWeight = sum [weight | (_, weight) <- weightedPixels]
