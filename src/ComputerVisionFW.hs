@@ -58,21 +58,6 @@ correlate1d signal kernel = convolve1d signal (reverse kernel)
 correlate2d :: Num a => Matrix a -> Matrix a -> Matrix a
 correlate2d signal kernel = convolve2d signal (flip2dKernel kernel)
 
-meanValue :: Fractional a => Matrix a -> a
-meanValue window =
-  sum (concat (toLists window))
-    / fromIntegral (nrows window * ncols window)
-
-denoiseMean :: Fractional a =>Int -> Matrix a -> Matrix a
-denoiseMean k signal
-    | nrows signal < k || ncols signal < k = fromLists []
-    | k <= 0 = fromLists []
-    | otherwise = fromLists (rowsOf outputWidth meanValues)
-    where
-        signalWindows = windows2d 1 1 k k signal
-        meanValues = [ meanValue window | window <- signalWindows ]
-        outputWidth = ncols signal - k + 1
-
 zeroPad :: Num a => Int -> Matrix a -> Matrix a
 zeroPad padSize matrix
     | padSize <= 0 = matrix
@@ -136,61 +121,6 @@ mirrorIndex size index
             then position
             else period - position
 
-gaussianKernel :: Int -> Double -> Matrix Double
-gaussianKernel size sigma
-  | size <= 0 || even size || sigma <= 0 = fromLists []
-  | otherwise = fromLists normalizedWeights
-  where
-    radius = size `div` 2
-    weights =
-      [ [ exp (-(fromIntegral (x * x + y * y)) / (2 * sigma * sigma))
-        | x <- [-radius .. radius]
-        ]
-      | y <- [-radius .. radius]
-      ]
-    totalWeight = sum (concat weights)
-    normalizedWeights = map (map (/ totalWeight)) weights
-
-gaussianFilter :: Int -> Double -> Matrix Double -> Matrix Double
-gaussianFilter size sigma signal
-  | size <= 0 || even size || sigma <= 0 = fromLists []
-  | otherwise = convolve2d (mirrorPad (size `div` 2) signal) kernel
-  where
-    kernel = gaussianKernel size sigma
-
-impulseNoise :: Double -> Double -> Matrix Double -> IO (Matrix Double)
-impulseNoise saltProbability pepperProbability signal
-  | saltProbability < 0 || pepperProbability < 0
-      || saltProbability + pepperProbability > 1 =
-      error "impulseNoise: probabilities must be non-negative and sum to at most one"
-  | otherwise =
-      fromLists <$> traverse (traverse addImpulse) (toLists signal)
-  where
-    addImpulse intensity = do
-      sample <- randomRIO (0.0, 1.0)
-      pure $
-        if sample < pepperProbability
-          then 0.0
-          else if sample < pepperProbability + saltProbability
-            then 255.0
-            else intensity
-
-whiteGaussianNoise :: Double -> Double -> Matrix Double -> IO (Matrix Double)
-whiteGaussianNoise mean stdDev signal
-  | stdDev < 0 = error "whiteGaussianNoise: standard deviation must be non-negative"
-  | otherwise =
-      fromLists <$> traverse (traverse addNoise) (toLists signal)
-  where
-    addNoise x = do
-      z <- standardNormal
-      pure (x + mean + stdDev * z)
-
-standardNormal :: IO Double
-standardNormal = do
-  u1 <- randomRIO (1.0e-12, 1.0)
-  u2 <- randomRIO (0.0, 1.0)
-  pure (sqrt (-2 * log u1) * cos (2 * pi * u2))
-
 -- | Load a bitmap and convert its pixels to grayscale intensities in [0, 255].
 -- The resulting matrix has one row per image row and one column per image column.
 bitmapToGrayscaleMatrix :: FilePath -> IO (Either String (Matrix Double))
@@ -232,3 +162,73 @@ intensityToWord8 :: Double -> Word8
 intensityToWord8 intensity
   | isNaN intensity || isInfinite intensity = 0
   | otherwise = fromIntegral (round (max 0 (min 255 intensity)) :: Integer)
+
+impulseNoise :: Double -> Double -> Matrix Double -> IO (Matrix Double)
+impulseNoise saltProbability pepperProbability signal
+  | saltProbability < 0 || pepperProbability < 0
+      || saltProbability + pepperProbability > 1 =
+      error "impulseNoise: probabilities must be non-negative and sum to at most one"
+  | otherwise =
+      fromLists <$> traverse (traverse addImpulse) (toLists signal)
+  where
+    addImpulse intensity = do
+      sample <- randomRIO (0.0, 1.0)
+      pure $
+        if sample < pepperProbability
+          then 0.0
+          else if sample < pepperProbability + saltProbability
+            then 255.0
+            else intensity
+
+whiteGaussianNoise :: Double -> Double -> Matrix Double -> IO (Matrix Double)
+whiteGaussianNoise mean stdDev signal
+  | stdDev < 0 = error "whiteGaussianNoise: standard deviation must be non-negative"
+  | otherwise =
+      fromLists <$> traverse (traverse addNoise) (toLists signal)
+  where
+    addNoise x = do
+      z <- standardNormal
+      pure (x + mean + stdDev * z)
+
+standardNormal :: IO Double
+standardNormal = do
+  u1 <- randomRIO (1.0e-12, 1.0)
+  u2 <- randomRIO (0.0, 1.0)
+  pure (sqrt (-2 * log u1) * cos (2 * pi * u2))
+
+meanValue :: Fractional a => Matrix a -> a
+meanValue window =
+  sum (concat (toLists window))
+    / fromIntegral (nrows window * ncols window)
+
+denoiseMean :: Fractional a =>Int -> Matrix a -> Matrix a
+denoiseMean k signal
+    | nrows signal < k || ncols signal < k = fromLists []
+    | k <= 0 = fromLists []
+    | otherwise = fromLists (rowsOf outputWidth meanValues)
+    where
+        signalWindows = windows2d 1 1 k k signal
+        meanValues = [ meanValue window | window <- signalWindows ]
+        outputWidth = ncols signal - k + 1
+
+gaussianKernel :: Int -> Double -> Matrix Double
+gaussianKernel size sigma
+  | size <= 0 || even size || sigma <= 0 = fromLists []
+  | otherwise = fromLists normalizedWeights
+  where
+    radius = size `div` 2
+    weights =
+      [ [ exp (-(fromIntegral (x * x + y * y)) / (2 * sigma * sigma))
+        | x <- [-radius .. radius]
+        ]
+      | y <- [-radius .. radius]
+      ]
+    totalWeight = sum (concat weights)
+    normalizedWeights = map (map (/ totalWeight)) weights
+
+gaussianFilter :: Int -> Double -> Matrix Double -> Matrix Double
+gaussianFilter size sigma signal
+  | size <= 0 || even size || sigma <= 0 = fromLists []
+  | otherwise = convolve2d (mirrorPad (size `div` 2) signal) kernel
+  where
+    kernel = gaussianKernel size sigma
