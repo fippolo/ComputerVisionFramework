@@ -125,6 +125,14 @@ tests = TestList
             ( all (\value -> abs (value - 50.0) < 1.0e-12)
                 (concat (toLists (gaussianFilter 3 1.0 (fromLists (replicate 4 (replicate 4 50.0))))))
             )
+    , TestLabel "zero impulse-noise probabilities preserve the signal" $
+        TestCase $ do
+          result <- impulseNoise 0.0 0.0 (fromLists [[10.0, 20.0], [30.0, 40.0]])
+          result @?= fromLists [[10.0, 20.0], [30.0, 40.0]]
+    , TestLabel "salt probability one produces white pixels" $
+        TestCase $ do
+          result <- impulseNoise 1.0 0.0 (fromLists [[10.0, 20.0], [30.0, 40.0]])
+          result @?= fromLists [[255.0, 255.0], [255.0, 255.0]]
     , TestLabel "white Gaussian noise with zero deviation shifts by its mean" $
         TestCase $ do
           noisy <- whiteGaussianNoise 2.5 0.0

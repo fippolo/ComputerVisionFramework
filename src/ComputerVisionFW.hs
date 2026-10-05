@@ -158,6 +158,23 @@ gaussianFilter size sigma signal
   where
     kernel = gaussianKernel size sigma
 
+impulseNoise :: Double -> Double -> Matrix Double -> IO (Matrix Double)
+impulseNoise saltProbability pepperProbability signal
+  | saltProbability < 0 || pepperProbability < 0
+      || saltProbability + pepperProbability > 1 =
+      error "impulseNoise: probabilities must be non-negative and sum to at most one"
+  | otherwise =
+      fromLists <$> traverse (traverse addImpulse) (toLists signal)
+  where
+    addImpulse intensity = do
+      sample <- randomRIO (0.0, 1.0)
+      pure $
+        if sample < pepperProbability
+          then 0.0
+          else if sample < pepperProbability + saltProbability
+            then 255.0
+            else intensity
+
 whiteGaussianNoise :: Double -> Double -> Matrix Double -> IO (Matrix Double)
 whiteGaussianNoise mean stdDev signal
   | stdDev < 0 = error "whiteGaussianNoise: standard deviation must be non-negative"
