@@ -84,8 +84,8 @@ tests = TestList
             , [0.0, 0.0, 10.0, 10.0]
             ]) ~?=
         fromLists
-          [ [30.0, 30.0]
-          , [30.0, 30.0]
+          [ [10.0, 10.0]
+          , [10.0, 10.0]
           ]
     , "Prewitt combines horizontal and vertical gradients" ~:
         prewittEdgeDetection
@@ -94,7 +94,7 @@ tests = TestList
             , [10.0, 20.0, 30.0]
             , [20.0, 30.0, 40.0]
             ]) ~?=
-        fromLists [[sqrt 7200.0]]
+        fromLists [[sqrt 800.0]]
     , "Prewitt returns no values for an input smaller than its masks" ~:
         prewittEdgeDetection (fromLists [[1.0, 2.0], [3.0, 4.0]]) ~?= zero 0 0
     , "2x2 mean denoising" ~:

@@ -65,17 +65,17 @@ correlate2d signal kernel = convolve2d signal (flip2dKernel kernel)
 prewittHorizontalKernel :: Matrix Double
 prewittHorizontalKernel =
   fromLists
-    [ [-1, 0, 1]
-    , [-1, 0, 1]
-    , [-1, 0, 1]
+    [ [-1/3, 0, 1/3]
+    , [-1/3, 0, 1/3]
+    , [-1/3, 0, 1/3]
     ]
 
 prewittVerticalKernel :: Matrix Double
 prewittVerticalKernel =
   fromLists
-    [ [-1, -1, -1]
+    [ [-1 / 3, -1 / 3, -1 / 3]
     , [ 0,  0,  0]
-    , [ 1,  1,  1]
+    , [ 1 / 3,  1 / 3,  1 / 3]
     ]
 
 -- | Detect edges by combining the horizontal and vertical Prewitt responses.
