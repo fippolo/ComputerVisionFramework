@@ -95,6 +95,16 @@ prewittEdgeDetection signal =
     gradientMagnitude horizontal vertical =
       sqrt (horizontal * horizontal + vertical * vertical)
 
+-- | Suppress grayscale values below the threshold while preserving values at
+-- or above it.
+threshold :: Double -> Matrix Double -> Matrix Double
+threshold cutoff =
+  fromLists . map (map thresholdValue) . toLists
+  where
+    thresholdValue value
+      | value < cutoff = 0.0
+      | otherwise = value
+
 zeroPad :: Num a => Int -> Matrix a -> Matrix a
 zeroPad padSize matrix
     | padSize <= 0 = matrix

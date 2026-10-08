@@ -97,6 +97,16 @@ tests = TestList
         fromLists [[sqrt 800.0]]
     , "Prewitt returns no values for an input smaller than its masks" ~:
         prewittEdgeDetection (fromLists [[1.0, 2.0], [3.0, 4.0]]) ~?= zero 0 0
+    , "threshold removes values below its cutoff and preserves the rest" ~:
+        threshold 10.0
+          (fromLists
+            [ [0.0, 9.9, 10.0]
+            , [10.1, 255.0, -1.0]
+            ]) ~?=
+        fromLists
+          [ [0.0, 0.0, 10.0]
+          , [10.1, 255.0, 0.0]
+          ]
     , "2x2 mean denoising" ~:
         denoiseMean 2
           (fromLists
