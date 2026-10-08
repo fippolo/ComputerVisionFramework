@@ -59,6 +59,42 @@ correlate1d signal kernel = convolve1d signal (reverse kernel)
 correlate2d :: Num a => Matrix a -> Matrix a -> Matrix a
 correlate2d signal kernel = convolve2d signal (flip2dKernel kernel)
 
+-- | Standard Prewitt masks for estimating horizontal and vertical intensity
+-- gradients.  They are used with 'correlate2d', so their orientation is not
+-- reversed before being applied.
+prewittHorizontalKernel :: Matrix Double
+prewittHorizontalKernel =
+  fromLists
+    [ [-1, 0, 1]
+    , [-1, 0, 1]
+    , [-1, 0, 1]
+    ]
+
+prewittVerticalKernel :: Matrix Double
+prewittVerticalKernel =
+  fromLists
+    [ [-1, -1, -1]
+    , [ 0,  0,  0]
+    , [ 1,  1,  1]
+    ]
+
+-- | Detect edges by combining the horizontal and vertical Prewitt responses.
+-- The result has two fewer rows and columns than the input, because
+-- 'correlate2d' performs valid (unpadded) correlation.
+prewittEdgeDetection :: Matrix Double -> Matrix Double
+prewittEdgeDetection signal =
+  if nrows signal < 3 || ncols signal < 3
+    then zero 0 0
+    else fromLists
+      (zipWith (zipWith gradientMagnitude)
+        (toLists horizontalResponse)
+        (toLists verticalResponse))
+  where
+    horizontalResponse = correlate2d signal prewittHorizontalKernel
+    verticalResponse = correlate2d signal prewittVerticalKernel
+    gradientMagnitude horizontal vertical =
+      sqrt (horizontal * horizontal + vertical * vertical)
+
 zeroPad :: Num a => Int -> Matrix a -> Matrix a
 zeroPad padSize matrix
     | padSize <= 0 = matrix

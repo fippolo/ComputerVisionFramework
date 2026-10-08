@@ -1,7 +1,7 @@
 module Main where
 
 import ComputerVisionFW
-import Data.Matrix (fromLists, toLists)
+import Data.Matrix (fromLists, toLists, zero)
 import Test.HUnit
 
 tests :: Test
@@ -75,6 +75,28 @@ tests = TestList
           [ [411,456,501]
           , [636,681,726]
           ]
+    , "Prewitt detects a vertical edge" ~:
+        prewittEdgeDetection
+          (fromLists
+            [ [0.0, 0.0, 10.0, 10.0]
+            , [0.0, 0.0, 10.0, 10.0]
+            , [0.0, 0.0, 10.0, 10.0]
+            , [0.0, 0.0, 10.0, 10.0]
+            ]) ~?=
+        fromLists
+          [ [30.0, 30.0]
+          , [30.0, 30.0]
+          ]
+    , "Prewitt combines horizontal and vertical gradients" ~:
+        prewittEdgeDetection
+          (fromLists
+            [ [ 0.0, 10.0, 20.0]
+            , [10.0, 20.0, 30.0]
+            , [20.0, 30.0, 40.0]
+            ]) ~?=
+        fromLists [[sqrt 7200.0]]
+    , "Prewitt returns no values for an input smaller than its masks" ~:
+        prewittEdgeDetection (fromLists [[1.0, 2.0], [3.0, 4.0]]) ~?= zero 0 0
     , "2x2 mean denoising" ~:
         denoiseMean 2
           (fromLists
