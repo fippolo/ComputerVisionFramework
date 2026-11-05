@@ -398,3 +398,9 @@ rectangleSum integral left top right bottom =
     - integral ! (top, right + 1)
     - integral ! (bottom + 1, left)
     + integral ! (top, left)
+
+
+-- TODO:  matrix difference,Non-Maxima Suppresion, 
+--        Sobel edge detection, LOG edge detection,
+--        moravec interest point detector,
+--        Harris corner detector
